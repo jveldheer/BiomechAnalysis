@@ -91,10 +91,42 @@
 
         function handlePhotoUpload(view, input) {
             if (input.files && input.files[0]) {
-                uploadedPhotos[view] = true;
-                input.parentElement.classList.add('uploaded');
-                input.parentElement.querySelector('.photo-upload-icon').textContent = '✅';
-                checkIfReady();
+                const file = input.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    uploadedPhotos[view] = true;
+                    
+                    // Get the upload container
+                    const uploadContainer = document.getElementById(view + '-upload');
+                    
+                    // Add uploaded class and update display
+                    uploadContainer.classList.add('uploaded');
+                    
+                    // Create or update the image preview
+                    let img = uploadContainer.querySelector('img');
+                    if (!img) {
+                        img = document.createElement('img');
+                        uploadContainer.insertBefore(img, uploadContainer.firstChild);
+                    }
+                    img.src = e.target.result;
+                    
+                    // Update the icon and text
+                    const icon = uploadContainer.querySelector('.photo-upload-icon');
+                    if (icon) icon.textContent = '✅';
+                    
+                    // Hide the text content when image is shown
+                    const textElements = uploadContainer.querySelectorAll('div:not(.upload-overlay):not(.photo-upload-icon)');
+                    textElements.forEach(el => {
+                        if (!el.classList.contains('photo-upload-icon') && !el.classList.contains('upload-overlay')) {
+                            el.style.display = 'none';
+                        }
+                    });
+                    
+                    checkIfReady();
+                };
+                
+                reader.readAsDataURL(file);
             }
         }
 
@@ -573,6 +605,33 @@ Veldheer Lineman Vault - For educational purposes only
             margin-bottom: 20px;
         }
 
+        .photo-upload.uploaded img {
+            width: 100%;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 5px;
+        }
+
+        .photo-upload.uploaded .upload-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(76, 175, 80, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 15px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .photo-upload.uploaded:hover .upload-overlay {
+            opacity: 1;
+        }
+
         .photo-upload {
             border: 2px dashed #ff6b35;
             border-radius: 15px;
@@ -585,6 +644,8 @@ Veldheer Lineman Vault - For educational purposes only
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            position: relative;
+            overflow: hidden;
         }
 
         .photo-upload:hover {
@@ -1225,29 +1286,41 @@ Veldheer Lineman Vault - For educational purposes only
                 <h2>📸 Photo Capture & Measurements</h2>
                 
                 <div class="photo-grid">
-                    <div class="photo-upload" onclick="document.getElementById('front-photo').click()">
+                    <div class="photo-upload" onclick="document.getElementById('front-photo').click()" id="front-upload">
                         <input type="file" id="front-photo" accept="image/*">
                         <div class="photo-upload-icon">📷</div>
                         <div>Front View</div>
                         <small>Head-to-toe, arms at sides</small>
+                        <div class="upload-overlay">
+                            <span style="color: white; font-weight: bold;">✓ Uploaded - Click to change</span>
+                        </div>
                     </div>
-                    <div class="photo-upload" onclick="document.getElementById('back-photo').click()">
+                    <div class="photo-upload" onclick="document.getElementById('back-photo').click()" id="back-upload">
                         <input type="file" id="back-photo" accept="image/*">
                         <div class="photo-upload-icon">📷</div>
                         <div>Back View</div>
                         <small>Head-to-toe, arms at sides</small>
+                        <div class="upload-overlay">
+                            <span style="color: white; font-weight: bold;">✓ Uploaded - Click to change</span>
+                        </div>
                     </div>
-                    <div class="photo-upload" onclick="document.getElementById('left-photo').click()">
+                    <div class="photo-upload" onclick="document.getElementById('left-photo').click()" id="left-upload">
                         <input type="file" id="left-photo" accept="image/*">
                         <div class="photo-upload-icon">📷</div>
                         <div>Left Side</div>
                         <small>Profile view, natural stance</small>
+                        <div class="upload-overlay">
+                            <span style="color: white; font-weight: bold;">✓ Uploaded - Click to change</span>
+                        </div>
                     </div>
-                    <div class="photo-upload" onclick="document.getElementById('right-photo').click()">
+                    <div class="photo-upload" onclick="document.getElementById('right-photo').click()" id="right-upload">
                         <input type="file" id="right-photo" accept="image/*">
                         <div class="photo-upload-icon">📷</div>
                         <div>Right Side</div>
                         <small>Profile view, natural stance</small>
+                        <div class="upload-overlay">
+                            <span style="color: white; font-weight: bold;">✓ Uploaded - Click to change</span>
+                        </div>
                     </div>
                 </div>
 

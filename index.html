@@ -1,4 +1,4 @@
-<!-- Force refresh -->    <script>
+<!-- Refresh preview -->    <script>
         let uploadedPhotos = {
             front: false,
             back: false,
@@ -164,17 +164,33 @@
 
         // Check if all inputs are ready
         function checkIfReady() {
+            console.log('Checking if ready...');
+            
             const allPhotosUploaded = Object.values(uploadedPhotos).every(uploaded => uploaded);
             const heightFeet = document.getElementById('height-feet').value;
             const heightInches = document.getElementById('height-inches').value;
             const weight = document.getElementById('weight').value;
             const age = document.getElementById('age').value;
             
+            console.log('Photos:', uploadedPhotos);
+            console.log('Height feet:', heightFeet);
+            console.log('Height inches:', heightInches);
+            console.log('Weight:', weight);
+            console.log('Age:', age);
+            
             const analyzeButton = document.getElementById('analyze-button');
-            if (allPhotosUploaded && heightFeet && heightInches !== '' && weight && age) {
+            const isReady = allPhotosUploaded && heightFeet && heightInches !== '' && weight && age;
+            
+            console.log('All ready?', isReady);
+            
+            if (isReady) {
                 analyzeButton.disabled = false;
+                analyzeButton.style.opacity = '1';
+                analyzeButton.style.cursor = 'pointer';
             } else {
                 analyzeButton.disabled = true;
+                analyzeButton.style.opacity = '0.6';
+                analyzeButton.style.cursor = 'not-allowed';
             }
         }
 
@@ -1616,32 +1632,6 @@ Veldheer Lineman Vault - For educational purposes only
                 <div class="recommendations">
                     <h3>🎯 Position-Specific Recommendations</h3>
                     
-                    ${data.wingspanRatio < 1.04 ? `
-                    <div class="recommendation-item">
-                        <strong>Reach Enhancement:</strong> Focus on shoulder mobility and lat stretches. Practice wide-set pass protection drills to maximize effective reach.
-                    </div>` : ''}
-                    
-                    ${data.femurRatio > 0.28 ? `
-                    <div class="recommendation-item">
-                        <strong>Leverage Training:</strong> Emphasize hip hinge patterns and low-pad-level drills. Longer femurs require extra attention to knee bend in stance.
-                    </div>` : ''}
-                    
-                    ${data.bodyFatEst > 25 ? `
-                    <div class="recommendation-item">
-                        <strong>Body Composition Priority:</strong> Target gradual fat loss to reach Fair-Good range (18-25%). Focus on lean mass retention and metabolic conditioning.
-                    </div>` : data.bodyFatEst > 22 ? `
-                    <div class="recommendation-item">
-                        <strong>Body Composition:</strong> Work toward Good range (18-22%) through consistent training and nutrition. You're close to optimal levels.
-                    </div>` : data.bodyFatEst < 18 ? `
-                    <div class="recommendation-item">
-                        <strong>Elite Body Composition:</strong> Maintain current levels through consistent training. Your body fat % puts you in elite category for O-linemen.
-                    </div>` : ''}
-                    
-                    ${Math.abs(data.pelvicTilt) > 3 ? `
-                    <div class="recommendation-item">
-                        <strong>Postural Correction:</strong> ${data.pelvicTilt > 0 ? 'Hip flexor stretches and glute activation' : 'Hamstring flexibility and core strengthening'} exercises daily.
-                    </div>` : ''}
-                    
                     <div class="recommendation-item">
                         <strong>Weight Room Priority:</strong> Based on your profile, emphasize explosive hip extension and unilateral leg strength. Target 2.5x bodyweight trap bar deadlift.
                     </div>
@@ -1649,8 +1639,50 @@ Veldheer Lineman Vault - For educational purposes only
                     <div class="recommendation-item">
                         <strong>Technique Focus:</strong> Your biomechanics suggest working on punch timing and hand placement. Film study recommendation: Elite pass protectors with similar builds.
                     </div>
+                    
+                    <div class="recommendation-item" id="wingspan-rec" style="display: none;">
+                        <strong>Reach Enhancement:</strong> Focus on shoulder mobility and lat stretches. Practice wide-set pass protection drills to maximize effective reach.
+                    </div>
+                    
+                    <div class="recommendation-item" id="femur-rec" style="display: none;">
+                        <strong>Leverage Training:</strong> Emphasize hip hinge patterns and low-pad-level drills. Longer femurs require extra attention to knee bend in stance.
+                    </div>
+                    
+                    <div class="recommendation-item" id="bodyfat-rec" style="display: none;">
+                        <strong>Body Composition:</strong> <span id="bodyfat-advice"></span>
+                    </div>
+                    
+                    <div class="recommendation-item" id="posture-rec" style="display: none;">
+                        <strong>Postural Correction:</strong> <span id="posture-advice"></span>
+                    </div>
                 </div>
             `;
+            
+            // Show specific recommendations based on data
+            if (data.wingspanRatio < 1.04) {
+                document.getElementById('wingspan-rec').style.display = 'block';
+            }
+            
+            if (data.femurRatio > 0.28) {
+                document.getElementById('femur-rec').style.display = 'block';
+            }
+            
+            if (data.bodyFatEst > 25) {
+                document.getElementById('bodyfat-rec').style.display = 'block';
+                document.getElementById('bodyfat-advice').textContent = 'Target gradual fat loss to reach Fair-Good range (18-25%). Focus on lean mass retention and metabolic conditioning.';
+            } else if (data.bodyFatEst > 22) {
+                document.getElementById('bodyfat-rec').style.display = 'block';
+                document.getElementById('bodyfat-advice').textContent = 'Work toward Good range (18-22%) through consistent training and nutrition. You\'re close to optimal levels.';
+            } else if (data.bodyFatEst < 18) {
+                document.getElementById('bodyfat-rec').style.display = 'block';
+                document.getElementById('bodyfat-advice').textContent = 'Maintain current levels through consistent training. Your body fat % puts you in elite category for O-linemen.';
+            }
+            
+            if (Math.abs(data.pelvicTilt) > 3) {
+                document.getElementById('posture-rec').style.display = 'block';
+                const advice = data.pelvicTilt > 0 ? 'Hip flexor stretches and glute activation exercises daily.' : 'Hamstring flexibility and core strengthening exercises daily.';
+                document.getElementById('posture-advice').textContent = advice;
+            }
         }
     </script>
 </body>

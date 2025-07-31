@@ -1000,15 +1000,15 @@
                 // Simulate AI vision measurements with realistic variance
                 const visionAccuracy = 0.98; // 98% accuracy simulation
                 
-                // AI-detected circumference measurements (simulated)
-                const waistBase = (totalHeightInches * 0.45) + (weight * 0.05) + (age * 0.1); // Base calculation
-                const waist = waistBase + (Math.random() * 4 - 2); // ±2" variance
+                // AI-detected circumference measurements (simulated with realistic calculations)
+                const waistBase = 28 + (weight / 50) + (totalHeightInches / 25) - (age / 10); // More realistic baseline
+                const waist = Math.max(28, Math.min(50, waistBase + (Math.random() * 6 - 3))); // 28-50" range with ±3" variance
                 
-                const hipBase = waist + 6 + (Math.random() * 3 - 1.5); // Hips typically 6" larger
+                const hipBase = waist + 4 + (Math.random() * 4 - 2); // Hips typically 4-6" larger than waist
                 const hip = Math.max(waist + 2, hipBase);
                 
-                const shoulderWidth = (totalHeightInches * 0.28) + (Math.random() * 2 - 1); // Shoulder width
-                const thighCirc = (totalHeightInches * 0.32) + (Math.random() * 3 - 1.5); // Thigh circumference
+                const shoulderWidth = 16 + (totalHeightInches / 5) + (Math.random() * 4 - 2); // More realistic shoulder calculation
+                const thighCirc = 20 + (weight / 15) + (Math.random() * 4 - 2); // Realistic thigh measurement
                 
                 // Advanced age-adjusted body fat calculation
                 const bmi = (weight / (totalHeightInches * totalHeightInches)) * 703;

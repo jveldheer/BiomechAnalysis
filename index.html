@@ -456,23 +456,33 @@
 
         .age-option {
             flex: 1;
-            padding: 12px;
+            padding: 15px;
             background: rgba(255, 255, 255, 0.1);
             border: 2px solid transparent;
             border-radius: 10px;
             cursor: pointer;
             text-align: center;
             transition: all 0.3s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
         }
 
         .age-option:hover {
             border-color: #ff6b35;
             background: rgba(255, 107, 53, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .age-option:active {
+            transform: translateY(0);
         }
 
         .age-option.selected {
             border-color: #ff6b35;
             background: rgba(255, 107, 53, 0.3);
+            box-shadow: 0 0 15px rgba(255, 107, 53, 0.3);
         }
 
         .parent-consent {
@@ -816,59 +826,125 @@
         let selectedAge = null;
         let consentGiven = false;
         let currentResults = null;
+        // Global variable to store analysis runs
+        let analysisRuns = [];
 
         // Consent Modal Functions
         function selectAge(age) {
+            console.log('Age selected:', age);
             selectedAge = age;
             
             // Update UI
-            document.getElementById('age-adult').classList.remove('selected');
-            document.getElementById('age-minor').classList.remove('selected');
-            document.getElementById('age-' + age).classList.add('selected');
+            const adultBtn = document.getElementById('age-adult');
+            const minorBtn = document.getElementById('age-minor');
+            
+            if (adultBtn && minorBtn) {
+                adultBtn.classList.remove('selected');
+                minorBtn.classList.remove('selected');
+                document.getElementById('age-' + age).classList.add('selected');
+            }
             
             // Show/hide parent consent section
             const parentConsent = document.getElementById('parent-consent');
             const parentCheckbox = document.getElementById('parent-checkbox');
             
             if (age === 'minor') {
-                parentConsent.style.display = 'block';
-                parentCheckbox.style.display = 'flex';
+                if (parentConsent) parentConsent.style.display = 'block';
+                if (parentCheckbox) parentCheckbox.style.display = 'flex';
             } else {
-                parentConsent.style.display = 'none';
-                parentCheckbox.style.display = 'none';
-                document.getElementById('consent-parent').checked = false;
+                if (parentConsent) parentConsent.style.display = 'none';
+                if (parentCheckbox) parentCheckbox.style.display = 'none';
+                const parentConsentCheck = document.getElementById('consent-parent');
+                if (parentConsentCheck) parentConsentCheck.checked = false;
             }
             
             checkConsentStatus();
         }
 
         function checkConsentStatus() {
-            const understand = document.getElementById('consent-understand').checked;
-            const voluntary = document.getElementById('consent-voluntary').checked;
-            const appropriate = document.getElementById('consent-appropriate').checked;
-            const parent = document.getElementById('consent-parent').checked;
-            
+            const understand = document.getElementById('consent-understand');
+            const voluntary = document.getElementById('consent-voluntary'); 
+            const appropriate = document.getElementById('consent-appropriate');
+            const parent = document.getElementById('consent-parent');
             const acceptBtn = document.getElementById('accept-btn');
             
-            let canAccept = understand && voluntary && appropriate && selectedAge;
+            if (!understand || !voluntary || !appropriate || !acceptBtn) {
+                console.log('Missing consent elements');
+                return;
+            }
+            
+            let canAccept = understand.checked && voluntary.checked && appropriate.checked && selectedAge;
             
             // If minor, also need parent consent
-            if (selectedAge === 'minor') {
-                canAccept = canAccept && parent;
+            if (selectedAge === 'minor' && parent) {
+                canAccept = canAccept && parent.checked;
             }
             
             acceptBtn.disabled = !canAccept;
+            console.log('Consent status:', canAccept);
         }
 
         function acceptConsent() {
+            console.log('Consent accepted');
             consentGiven = true;
-            document.getElementById('consent-overlay').style.display = 'none';
-            document.getElementById('main-app').classList.remove('hidden');
+            const overlay = document.getElementById('consent-overlay');
+            const mainApp = document.getElementById('main-app');
+            
+            if (overlay) overlay.style.display = 'none';
+            if (mainApp) mainApp.classList.remove('hidden');
         }
 
         function declineConsent() {
             alert('You must accept the terms to use the VLV Biomech Analyzer. Thank you for your understanding.');
+            // Optionally redirect or close
         }
+
+        // Initialize when DOM is loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing consent system');
+            
+            // Ensure all elements exist
+            const elements = [
+                'consent-understand',
+                'consent-voluntary', 
+                'consent-appropriate',
+                'consent-parent',
+                'age-adult',
+                'age-minor',
+                'accept-btn'
+            ];
+            
+            elements.forEach(id => {
+                const element = document.getElementById(id);
+                if (element) {
+                    console.log(`Found element: ${id}`);
+                } else {
+                    console.warn(`Missing element: ${id}`);
+                }
+            });
+            
+            // Add click event listeners to age buttons as backup
+            const adultBtn = document.getElementById('age-adult');
+            const minorBtn = document.getElementById('age-minor');
+            
+            if (adultBtn) {
+                adultBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Adult button clicked');
+                    selectAge('adult');
+                });
+            }
+            
+            if (minorBtn) {
+                minorBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('Minor button clicked');
+                    selectAge('minor');
+                });
+            }
+        });
 
         // Photo upload functions
         function triggerFileInput(view) {
@@ -946,20 +1022,35 @@
         function checkIfReady() {
             console.log('Checking if ready...');
             
+            if (!consentGiven) {
+                console.log('Consent not given yet');
+                return;
+            }
+            
             const allPhotosUploaded = Object.values(uploadedPhotos).every(uploaded => uploaded);
-            const heightFeet = document.getElementById('height-feet').value;
-            const heightInches = document.getElementById('height-inches').value;
-            const weight = document.getElementById('weight').value;
-            const age = document.getElementById('age').value;
+            const heightFeet = document.getElementById('height-feet');
+            const heightInches = document.getElementById('height-inches');
+            const weight = document.getElementById('weight');
+            const age = document.getElementById('age');
+            const analyzeButton = document.getElementById('analyze-button');
+            
+            if (!heightFeet || !heightInches || !weight || !age || !analyzeButton) {
+                console.log('Missing input elements');
+                return;
+            }
+            
+            const heightFeetValue = heightFeet.value;
+            const heightInchesValue = heightInches.value;
+            const weightValue = weight.value;
+            const ageValue = age.value;
             
             console.log('Photos:', uploadedPhotos);
-            console.log('Height feet:', heightFeet);
-            console.log('Height inches:', heightInches);
-            console.log('Weight:', weight);
-            console.log('Age:', age);
+            console.log('Height feet:', heightFeetValue);
+            console.log('Height inches:', heightInchesValue);
+            console.log('Weight:', weightValue);
+            console.log('Age:', ageValue);
             
-            const analyzeButton = document.getElementById('analyze-button');
-            const isReady = allPhotosUploaded && heightFeet && heightInches !== '' && weight && age;
+            const isReady = allPhotosUploaded && heightFeetValue && heightInchesValue !== '' && weightValue && ageValue;
             
             console.log('All ready?', isReady);
             

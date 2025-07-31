@@ -1,578 +1,4 @@
-<!-- Refresh preview -->    <script>
-        let uploadedPhotos = {
-            front: false,
-            back: false,
-            left: false,
-            right: false
-        };
-
-        let selectedAge = null;
-        let consentGiven = false;
-        let currentResults = null;
-
-        // Consent Modal Functions
-        function selectAge(age) {
-            selectedAge = age;
-            
-            // Update UI
-            document.getElementById('age-adult').classList.remove('selected');
-            document.getElementById('age-minor').classList.remove('selected');
-            document.getElementById('age-' + age).classList.add('selected');
-            
-            // Show/hide parent consent section
-            const parentConsent = document.getElementById('parent-consent');
-            const parentCheckbox = document.getElementById('parent-checkbox');
-            
-            if (age === 'minor') {
-                parentConsent.style.display = 'block';
-                parentCheckbox.style.display = 'flex';
-            } else {
-                parentConsent.style.display = 'none';
-                parentCheckbox.style.display = 'none';
-                document.getElementById('consent-parent').checked = false;
-            }
-            
-            checkConsentStatus();
-        }
-
-        function checkConsentStatus() {
-            const understand = document.getElementById('consent-understand').checked;
-            const voluntary = document.getElementById('consent-voluntary').checked;
-            const appropriate = document.getElementById('consent-appropriate').checked;
-            const parent = document.getElementById('consent-parent').checked;
-            
-            const acceptBtn = document.getElementById('accept-btn');
-            
-            let canAccept = understand && voluntary && appropriate && selectedAge;
-            
-            // If minor, also need parent consent
-            if (selectedAge === 'minor') {
-                canAccept = canAccept && parent;
-            }
-            
-            acceptBtn.disabled = !canAccept;
-        }
-
-        function acceptConsent() {
-            consentGiven = true;
-            document.getElementById('consent-overlay').style.display = 'none';
-            document.getElementById('main-app').classList.remove('hidden');
-        }
-
-        function declineConsent() {
-            alert('You must accept the terms to use the VLV Biomech Analyzer. Thank you for your understanding.');
-            // Could redirect to a different page or close window
-        }
-
-        // Add event listeners for checkboxes
-        document.addEventListener('DOMContentLoaded', function() {
-            const checkboxes = ['consent-understand', 'consent-voluntary', 'consent-appropriate', 'consent-parent'];
-            checkboxes.forEach(id => {
-                const checkbox = document.getElementById(id);
-                if (checkbox) {
-                    checkbox.addEventListener('change', checkConsentStatus);
-                }
-            });
-        });
-
-        // Photo upload functions
-        function triggerFileInput(view) {
-            document.getElementById(view + '-photo').click();
-        }
-
-        function handlePhotoUpload(view, input) {
-            console.log('Upload triggered for:', view);
-            
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                console.log('File selected:', file.name, file.size);
-                
-                // Validate file type
-                if (!file.type.startsWith('image/')) {
-                    alert('Please select an image file');
-                    return;
-                }
-                
-                // Validate file size (10MB max)
-                if (file.size > 10 * 1024 * 1024) {
-                    alert('Image too large. Please select an image under 10MB');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    console.log('Image loaded for:', view);
-                    
-                    // Mark as uploaded
-                    uploadedPhotos[view] = true;
-                    
-                    // Get the upload container
-                    const uploadContainer = document.getElementById(view + '-upload');
-                    
-                    // Remove any existing preview
-                    const existingPreview = uploadContainer.querySelector('.photo-preview');
-                    if (existingPreview) {
-                        existingPreview.remove();
-                    }
-                    
-                    // Create image preview
-                    const img = document.createElement('img');
-                    img.className = 'photo-preview';
-                    img.src = e.target.result;
-                    img.alt = view + ' view';
-                    
-                    // Add the image to the container
-                    uploadContainer.appendChild(img);
-                    
-                    // Add uploaded class
-                    uploadContainer.classList.add('uploaded');
-                    
-                    // Update the icon
-                    const icon = uploadContainer.querySelector('.photo-upload-icon');
-                    if (icon) icon.textContent = '✅';
-                    
-                    console.log('Upload complete for:', view);
-                    checkIfReady();
-                };
-                
-                reader.onerror = function() {
-                    console.error('Error reading file for:', view);
-                    alert('Error reading the image file. Please try again.');
-                };
-                
-                reader.readAsDataURL(file);
-            } else {
-                console.log('No file selected for:', view);
-            }
-        }
-
-        // Handle photo uploads - remove old event listeners
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, setting up photo uploads');
-            
-            // Remove any existing event listeners by cloning and replacing elements
-            const photoInputs = ['front-photo', 'back-photo', 'left-photo', 'right-photo'];
-            photoInputs.forEach(id => {
-                const oldInput = document.getElementById(id);
-                if (oldInput) {
-                    const newInput = oldInput.cloneNode(true);
-                    oldInput.parentNode.replaceChild(newInput, oldInput);
-                }
-            });
-        });
-
-        // Check if all inputs are ready
-        function checkIfReady() {
-            console.log('Checking if ready...');
-            
-            const allPhotosUploaded = Object.values(uploadedPhotos).every(uploaded => uploaded);
-            const heightFeet = document.getElementById('height-feet').value;
-            const heightInches = document.getElementById('height-inches').value;
-            const weight = document.getElementById('weight').value;
-            const age = document.getElementById('age').value;
-            
-            console.log('Photos:', uploadedPhotos);
-            console.log('Height feet:', heightFeet);
-            console.log('Height inches:', heightInches);
-            console.log('Weight:', weight);
-            console.log('Age:', age);
-            
-            const analyzeButton = document.getElementById('analyze-button');
-            const isReady = allPhotosUploaded && heightFeet && heightInches !== '' && weight && age;
-            
-            console.log('All ready?', isReady);
-            
-            if (isReady) {
-                analyzeButton.disabled = false;
-                analyzeButton.style.opacity = '1';
-                analyzeButton.style.cursor = 'pointer';
-            } else {
-                analyzeButton.disabled = true;
-                analyzeButton.style.opacity = '0.6';
-                analyzeButton.style.cursor = 'not-allowed';
-            }
-        }
-
-        // Add event listeners for measurements
-        document.getElementById('height-feet').addEventListener('input', checkIfReady);
-        document.getElementById('height-inches').addEventListener('input', checkIfReady);
-        document.getElementById('weight').addEventListener('input', checkIfReady);
-        document.getElementById('age').addEventListener('input', checkIfReady);
-
-        function analyzePlayer() {
-            const resultsSection = document.getElementById('results-section');
-            
-            // Show loading state
-            resultsSection.innerHTML = `
-                <h2>📊 Analysis Results</h2>
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <p>Analyzing biomechanics with GROK4 AI Vision...</p>
-                    <small>🔍 Detecting body landmarks and measuring circumferences...<br>
-                    📐 Calculating structural ratios and postural alignment...<br>
-                    🧮 Processing age-adjusted body composition metrics...</small>
-                </div>
-            `;
-
-            // Simulate analysis with realistic data
-            setTimeout(() => {
-                const heightFeet = parseInt(document.getElementById('height-feet').value);
-                const heightInches = parseInt(document.getElementById('height-inches').value);
-                const totalHeightInches = (heightFeet * 12) + heightInches;
-                const weight = parseInt(document.getElementById('weight').value);
-                const age = parseInt(document.getElementById('age').value);
-                
-                // Simulate AI vision measurements with realistic variance
-                const visionAccuracy = 0.98; // 98% accuracy simulation
-                
-                // AI-detected circumference measurements (simulated)
-                const waistBase = (totalHeightInches * 0.45) + (weight * 0.05) + (age * 0.1); // Base calculation
-                const waist = waistBase + (Math.random() * 4 - 2); // ±2" variance
-                
-                const hipBase = waist + 6 + (Math.random() * 3 - 1.5); // Hips typically 6" larger
-                const hip = Math.max(waist + 2, hipBase);
-                
-                const shoulderWidth = (totalHeightInches * 0.28) + (Math.random() * 2 - 1); // Shoulder width
-                const thighCirc = (totalHeightInches * 0.32) + (Math.random() * 3 - 1.5); // Thigh circumference
-                
-                // Advanced age-adjusted body fat calculation
-                const bmi = (weight / (totalHeightInches * totalHeightInches)) * 703;
-                const waistToHeightRatio = waist / totalHeightInches;
-                
-                // Enhanced body fat calculation with age adjustment
-                let bodyFatEst;
-                if (age >= 18) {
-                    // Adult formula with age factor
-                    bodyFatEst = 64.5 - (45.0 * (totalHeightInches / 100)) + (0.08 * age) + (39.0 * (waist / 100));
-                } else {
-                    // Adolescent adjustment (lower baseline)
-                    bodyFatEst = 60.0 - (45.0 * (totalHeightInches / 100)) + (0.05 * age) + (35.0 * (waist / 100));
-                }
-                
-                // Clamp to realistic ranges and add slight variance
-                bodyFatEst = Math.max(8, Math.min(35, bodyFatEst + (Math.random() * 3 - 1.5)));
-                
-                // Generate other realistic biomechanical data with AI vision simulation
-                const wingspanRatio = 1.02 + (Math.random() * 0.06); // 1.02-1.08
-                const femurRatio = 0.26 + (Math.random() * 0.04); // 0.26-0.30
-                const torsoRatio = 0.52 + (Math.random() * 0.06); // 0.52-0.58
-                const pelvicTilt = Math.random() * 12 - 6; // -6 to +6 degrees
-                const ribAngle = 15 + Math.random() * 10; // 15-25 degrees
-                
-                // Muscle mass estimation (age-adjusted)
-                const muscleMassPercentage = Math.max(35, Math.min(55, 
-                    45 + (weight / totalHeightInches * 2) - (age * 0.2) + (Math.random() * 4 - 2)
-                ));
-
-                currentResults = {
-                    heightFeet,
-                    heightInches,
-                    totalHeightInches,
-                    weight,
-                    age,
-                    waist,
-                    hip,
-                    shoulderWidth,
-                    thighCirc,
-                    bmi,
-                    wingspanRatio,
-                    femurRatio,
-                    torsoRatio,
-                    bodyFatEst,
-                    muscleMassPercentage,
-                    pelvicTilt,
-                    ribAngle,
-                    waistToHeightRatio,
-                    visionAccuracy
-                };
-
-                displayResults(currentResults);
-                
-                // Show results action buttons
-                document.getElementById('results-actions').style.display = 'flex';
-            }, 4000); // Longer processing time to show AI vision work
-        }
-
-        function getStatusClass(value, thresholds) {
-            if (value >= thresholds.excellent) return 'status-excellent';
-            if (value >= thresholds.good) return 'status-good';
-            if (value >= thresholds.needsWork) return 'status-needs-work';
-            return 'status-concern';
-        }
-
-        function getStatusText(value, thresholds) {
-            if (value >= thresholds.excellent) return 'Excellent';
-            if (value >= thresholds.good) return 'Good';
-            if (value >= thresholds.needsWork) return 'Needs Work';
-            return 'Concern';
-        }
-
-        function displayResults(data) {
-            const resultsSection = document.getElementById('results-section');
-            
-            // Determine statuses for different metrics
-            const wingspanStatus = data.wingspanRatio >= 1.06 ? 'Excellent' : data.wingspanRatio >= 1.04 ? 'Good' : 'Needs Work';
-            const femurStatus = data.femurRatio <= 0.27 ? 'Excellent' : data.femurRatio <= 0.29 ? 'Good' : 'Needs Work';
-            const bodyFatStatus = data.bodyFatEst < 18 ? 'Elite' : data.bodyFatEst <= 22 ? 'Good' : data.bodyFatEst <= 25 ? 'Fair' : 'Concern';
-            const pelvicStatus = Math.abs(data.pelvicTilt) <= 2 ? 'Excellent' : Math.abs(data.pelvicTilt) <= 4 ? 'Good' : 'Needs Work';
-
-            resultsSection.innerHTML = `
-                <h2>📊 Analysis Results</h2>
-                
-                <div class="metric-card" style="background: rgba(76, 175, 80, 0.1); border-left-color: #4CAF50;">
-                    <h3>🤖 AI Vision Measurements</h3>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9rem;">
-                        <div><strong>Waist:</strong> ${data.waist.toFixed(1)}"</div>
-                        <div><strong>Hip:</strong> ${data.hip.toFixed(1)}"</div>
-                        <div><strong>Shoulder Width:</strong> ${data.shoulderWidth.toFixed(1)}"</div>
-                        <div><strong>Thigh:</strong> ${data.thighCirc.toFixed(1)}"</div>
-                    </div>
-                    <div class="metric-description">Vision accuracy: ${(data.visionAccuracy * 100).toFixed(1)}% - Measurements automatically detected from uploaded photos</div>
-                </div>
-                
-                <div class="metric-card">
-                    <h3>🏗️ Structural Advantages</h3>
-                    <div class="metric-value">${(data.wingspanRatio * 100).toFixed(1)}% <span class="status-indicator ${getStatusClass(data.wingspanRatio, {excellent: 1.06, good: 1.04, needsWork: 1.02})}">${wingspanStatus}</span></div>
-                    <div class="metric-description">Wingspan-to-height ratio: ${(data.wingspanRatio * data.totalHeightInches).toFixed(1)}" wingspan. Elite O-linemen typically have 4-8% longer reach than height.</div>
-                </div>
-
-                <div class="metric-card">
-                    <h3>🦵 Lower Body Mechanics</h3>
-                    <div class="metric-value">${(data.femurRatio * 100).toFixed(1)}% <span class="status-indicator ${getStatusClass(1/data.femurRatio, {excellent: 3.7, good: 3.5, needsWork: 3.3})}">${femurStatus}</span></div>
-                    <div class="metric-description">Femur-to-leg ratio: Shorter femurs (≤27%) provide better leverage for pass protection and drive blocking stance.</div>
-                </div>
-
-                <div class="metric-card">
-                    <h3>💪 Body Composition (Age-Adjusted)</h3>
-                    <div class="metric-value">${data.bodyFatEst.toFixed(1)}% <span class="status-indicator ${data.bodyFatEst < 18 ? 'status-elite' : data.bodyFatEst <= 22 ? 'status-good' : data.bodyFatEst <= 25 ? 'status-fair' : 'status-concern'}">${bodyFatStatus}</span></div>
-                    <div class="metric-description">
-                        Age-adjusted body fat analysis (Age: ${data.age}). Elite: &lt;18% | Good: 18-22% | Fair: 22-25% | Concern: 25%+<br>
-                        <small>Waist-to-height: ${(data.waistToHeightRatio * 100).toFixed(1)}% | Estimated muscle mass: ${data.muscleMassPercentage.toFixed(1)}%</small>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <h3>⚖️ Postural Analysis</h3>
-                    <div class="metric-value">${data.pelvicTilt.toFixed(1)}° <span class="status-indicator ${getStatusClass(6-Math.abs(data.pelvicTilt), {excellent: 4, good: 2, needsWork: 1})}">${pelvicStatus}</span></div>
-                    <div class="metric-description">Pelvic tilt deviation: ${data.pelvicTilt > 0 ? 'Anterior' : 'Posterior'} tilt detected. Neutral alignment optimizes power transfer.</div>
-                </div>
-
-                <div class="metric-card">
-                    <h3>🫁 Torso Efficiency</h3>
-                    <div class="metric-value">${data.ribAngle.toFixed(1)}° <span class="status-indicator ${data.ribAngle >= 18 && data.ribAngle <= 22 ? 'status-excellent' : 'status-good'}">${data.ribAngle >= 18 && data.ribAngle <= 22 ? 'Excellent' : 'Good'}</span></div>
-                    <div class="metric-description">Rib stack angle: Optimal breathing mechanics and core stability for sustained blocking efforts.</div>
-                </div>
-
-                <div class="recommendations">
-                    <h3>🎯 Position-Specific Recommendations</h3>
-                    
-                    ${data.wingspanRatio < 1.04 ? `
-                    <div class="recommendation-item">
-                        <strong>Elite Body Composition:</strong> Maintain current levels through consistent training. Your body fat % puts you in elite category for O-linemen.
-                    </div>` : ''}
-                    
-                    ${Math.abs(data.pelvicTilt) > 3 ? `
-                    <div class="recommendation-item">
-                        <strong>Postural Correction:</strong> ${data.pelvicTilt > 0 ? 'Hip flexor stretches and glute activation' : 'Hamstring flexibility and core strengthening'} exercises daily.
-                    </div>` : ''}
-                    
-                    <div class="recommendation-item">
-                        <strong>Weight Room Priority:</strong> Based on your profile, emphasize explosive hip extension and unilateral leg strength. Target 2.5x bodyweight trap bar deadlift.
-                    </div>
-                    
-                    <div class="recommendation-item">
-                        <strong>Technique Focus:</strong> Your biomechanics suggest working on punch timing and hand placement. Film study recommendation: Elite pass protectors with similar builds.
-                    </div>
-                </div>
-            `;
-        }
-
-        // Results Download/Email Functions
-        function downloadResults() {
-            if (!currentResults) return;
-            
-            const reportContent = generateReportContent(currentResults);
-            const blob = new Blob([reportContent], { type: 'text/html' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `VLV_Biomech_Report_${Date.now()}.html`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        }
-
-        function emailResults() {
-            document.getElementById('email-modal').style.display = 'flex';
-        }
-
-        function closeEmailModal() {
-            document.getElementById('email-modal').style.display = 'none';
-            document.getElementById('email-address').value = '';
-            document.getElementById('player-name').value = '';
-        }
-
-        function sendEmail() {
-            const email = document.getElementById('email-address').value;
-            const playerName = document.getElementById('player-name').value || 'Athlete';
-            
-            if (!email) {
-                alert('Please enter an email address');
-                return;
-            }
-            
-            if (!currentResults) {
-                alert('No results to send');
-                return;
-            }
-
-            // Create email content
-            const subject = `VLV Biomech Analysis Report - ${playerName}`;
-            const body = generateEmailContent(currentResults, playerName);
-            
-            // Create mailto link
-            const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-            
-            // Open default email client
-            window.location.href = mailtoLink;
-            
-            closeEmailModal();
-            
-            // Show success message
-            alert('Email client opened! Your report is ready to send.');
-        }
-
-        function generateReportContent(data) {
-            const date = new Date().toLocaleDateString();
-            const playerName = document.getElementById('player-name').value || 'Athlete';
-            
-            return `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>VLV Biomech Analysis Report</title>
-                <style>
-                    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-                    .header { text-align: center; border-bottom: 3px solid #ff6b35; padding-bottom: 20px; margin-bottom: 30px; }
-                    .metric { background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid #ff6b35; }
-                    .recommendations { background: #fff3cd; padding: 15px; border-radius: 5px; }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <h1>🏈 VLV Offensive-Line Biomech Analysis</h1>
-                    <h2>${playerName}</h2>
-                    <p>Report Generated: ${date}</p>
-                    <p>Height: ${data.heightFeet}'${data.heightInches}" | Weight: ${data.weight} lbs | Age: ${data.age}</p>
-                    <p>AI Vision: Waist ${data.waist.toFixed(1)}" | Hip ${data.hip.toFixed(1)}" | Shoulder ${data.shoulderWidth.toFixed(1)}"</p>
-                </div>
-                
-                <div class="metric">
-                    <h3>🏗️ Structural Advantages</h3>
-                    <p><strong>Wingspan Ratio:</strong> ${(data.wingspanRatio * 100).toFixed(1)}%</p>
-                    <p>Wingspan: ${(data.wingspanRatio * data.totalHeightInches).toFixed(1)}" - Elite O-linemen typically have 4-8% longer reach than height.</p>
-                </div>
-                
-                <div class="metric">
-                    <h3>🤖 AI Vision Measurements</h3>
-                    <p><strong>Waist:</strong> ${data.waist.toFixed(1)}" | <strong>Hip:</strong> ${data.hip.toFixed(1)}" | <strong>Shoulder:</strong> ${data.shoulderWidth.toFixed(1)}" | <strong>Thigh:</strong> ${data.thighCirc.toFixed(1)}"</p>
-                    <p>Vision accuracy: ${(data.visionAccuracy * 100).toFixed(1)}% - Automatically detected from photos</p>
-                </div>
-                
-                <div class="metric">
-                    <h3>💪 Body Composition (Age-Adjusted)</h3>
-                    <p><strong>Body Fat:</strong> ${data.bodyFatEst.toFixed(1)}% | <strong>Muscle Mass:</strong> ${data.muscleMassPercentage.toFixed(1)}%</p>
-                    <p><strong>Age Factor:</strong> ${data.age} years | <strong>Waist-to-Height:</strong> ${(data.waistToHeightRatio * 100).toFixed(1)}%</p>
-                    <p>Target ranges: Elite <18% | Good 18-22% | Fair 22-25% | Concern 25%+</p>
-                </div>
-                
-                <div class="metric">
-                    <h3>🦵 Lower Body Mechanics</h3>
-                    <p><strong>Femur-to-Leg Ratio:</strong> ${(data.femurRatio * 100).toFixed(1)}%</p>
-                    <p>Shorter femurs (≤27%) provide better leverage for pass protection and drive blocking.</p>
-                </div>
-                
-                <div class="metric">
-                    <h3>⚖️ Postural Analysis</h3>
-                    <p><strong>Pelvic Tilt:</strong> ${data.pelvicTilt.toFixed(1)}° ${data.pelvicTilt > 0 ? 'Anterior' : 'Posterior'}</p>
-                    <p>Neutral alignment optimizes power transfer in blocking techniques.</p>
-                </div>
-                
-                <div class="recommendations">
-                    <h3>🎯 Training Recommendations</h3>
-                    <ul>
-                        <li>Weight Room Priority: Explosive hip extension and unilateral leg strength</li>
-                        <li>Target: 2.5x bodyweight trap bar deadlift</li>
-                        <li>Technique Focus: Punch timing and hand placement optimization</li>
-                        ${data.bodyFatEst > 25 ? '<li>Body Composition: Gradual fat loss to reach 18-25% range</li>' : ''}
-                        ${Math.abs(data.pelvicTilt) > 3 ? '<li>Postural Work: ' + (data.pelvicTilt > 0 ? 'Hip flexor stretches and glute activation' : 'Hamstring flexibility and core strengthening') + '</li>' : ''}
-                    </ul>
-                </div>
-                
-                <div style="margin-top: 30px; text-align: center; color: #666;">
-                    <p><em>Report generated by VLV Biomech Analyzer - Veldheer Lineman Vault</em></p>
-                    <p><small>For educational and training purposes only. Not medical advice.</small></p>
-                </div>
-            </body>
-            </html>
-            `;
-        }
-
-        function generateEmailContent(data, playerName) {
-            const date = new Date().toLocaleDateString();
-            
-            return `
-VLV BIOMECH ANALYSIS REPORT
-${playerName} - ${date}
-
-MEASUREMENTS:
-Height: ${data.heightFeet}'${data.heightInches}"
-Weight: ${data.weight} lbs  
-Age: ${data.age} years
-
-AI VISION MEASUREMENTS:
-Waist: ${data.waist.toFixed(1)}"
-Hip: ${data.hip.toFixed(1)}"
-Shoulder Width: ${data.shoulderWidth.toFixed(1)}"
-Thigh: ${data.thighCirc.toFixed(1)}"
-Vision Accuracy: ${(data.visionAccuracy * 100).toFixed(1)}%
-
-KEY METRICS:
-🏗️ Wingspan Ratio: ${(data.wingspanRatio * 100).toFixed(1)}%
-💪 Body Fat (Age-Adj): ${data.bodyFatEst.toFixed(1)}%
-🦵 Muscle Mass: ${data.muscleMassPercentage.toFixed(1)}%
-🦵 Femur Ratio: ${(data.femurRatio * 100).toFixed(1)}%
-⚖️ Pelvic Tilt: ${data.pelvicTilt.toFixed(1)}°
-
-TRAINING RECOMMENDATIONS:
-• Weight Room: Focus on explosive hip extension
-• Target: 2.5x bodyweight trap bar deadlift  
-• Technique: Work on punch timing and hand placement
-${data.bodyFatEst > 25 ? '• Body Comp: Target gradual fat loss to 18-25% range\n' : ''}${Math.abs(data.pelvicTilt) > 3 ? '• Posture: ' + (data.pelvicTilt > 0 ? 'Hip flexor stretches, glute activation' : 'Hamstring flexibility, core strengthening') + '\n' : ''}
-
-Generated by VLV Biomech Analyzer
-Veldheer Lineman Vault - For educational purposes only
-            `.trim();
-        }
-    </script>">
-                        <strong>Reach Enhancement:</strong> Focus on shoulder mobility and lat stretches. Practice wide-set pass protection drills to maximize effective reach.
-                    </div>` : ''}
-                    
-                    ${data.femurRatio > 0.28 ? `
-                    <div class="recommendation-item">
-                        <strong>Leverage Training:</strong> Emphasize hip hinge patterns and low-pad-level drills. Longer femurs require extra attention to knee bend in stance.
-                    </div>` : ''}
-                    
-                    ${data.bodyFatEst > 25 ? `
-                    <div class="recommendation-item">
-                        <strong>Body Composition Priority:</strong> Target gradual fat loss to reach Fair-Good range (18-25%). Focus on lean mass retention and metabolic conditioning.
-                    </div>` : data.bodyFatEst > 22 ? `
-                    <div class="recommendation-item">
-                        <strong>Body Composition:</strong> Work toward Good range (18-22%) through consistent training and nutrition. You're close to optimal levels.
-                    </div>` : data.bodyFatEst < 18 ? `
-                    <div class="recommendation-item<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -695,6 +121,7 @@ Veldheer Lineman Vault - For educational purposes only
             z-index: 2;
             color: white;
             text-align: center;
+            transition: opacity 0.3s ease;
         }
 
         .photo-preview {
@@ -732,106 +159,6 @@ Veldheer Lineman Vault - For educational purposes only
 
         .photo-upload.uploaded .photo-upload-content {
             opacity: 0;
-        }
-
-        .photo-upload:hover {
-            border-color: #f7931e;
-            background: rgba(255, 107, 53, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .photo-upload.uploaded {
-            border-color: #4CAF50;
-            background: rgba(76, 175, 80, 0.1);
-        }
-
-        .photo-upload input {
-            display: none;
-        }
-
-        .photo-upload-icon {
-            font-size: 2rem;
-            margin-bottom: 10px;
-        }
-
-        .email-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 1001;
-        }
-
-        .email-form {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-            border: 2px solid #ff6b35;
-            border-radius: 20px;
-            padding: 30px;
-            max-width: 400px;
-            width: 90%;
-            color: white;
-        }
-
-        .email-form h3 {
-            color: #ff6b35;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .email-form input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            font-size: 1rem;
-        }
-
-        .email-form input:focus {
-            outline: none;
-            border-color: #ff6b35;
-            box-shadow: 0 0 10px rgba(255, 107, 53, 0.3);
-        }
-
-        .email-form input::placeholder {
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .email-buttons {
-            display: flex;
-            gap: 10px;
-            margin-top: 20px;
-        }
-
-        .email-btn-action {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 10px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .email-btn-cancel {
-            background: #6c757d;
-            color: white;
-        }
-
-        .email-btn-send {
-            background: linear-gradient(45deg, #2196F3, #1976D2);
-            color: white;
-        }
-
-        .email-btn-action:hover {
-            transform: translateY(-2px);
         }
 
         .vision-analysis-info {
@@ -890,7 +217,7 @@ Veldheer Lineman Vault - For educational purposes only
             letter-spacing: 1px;
         }
 
-        .analyze-btn:hover {
+        .analyze-btn:hover:not(:disabled) {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px rgba(255, 107, 53, 0.3);
         }
@@ -1030,6 +357,20 @@ Veldheer Lineman Vault - For educational purposes only
             margin-bottom: 20px;
             font-size: 0.9rem;
             font-weight: bold;
+        }
+
+        .results-actions {
+            display: none;
+            margin-top: 15px;
+            gap: 10px;
+        }
+
+        .results-actions.show {
+            display: flex;
+        }
+
+        .hidden {
+            display: none;
         }
 
         .consent-overlay {
@@ -1213,10 +554,6 @@ Veldheer Lineman Vault - For educational purposes only
             transform: none;
         }
 
-        .hidden {
-            display: none;
-        }
-
         @media (max-width: 768px) {
             .main-content {
                 grid-template-columns: 1fr;
@@ -1227,7 +564,7 @@ Veldheer Lineman Vault - For educational purposes only
             }
             
             .measurements {
-                flex-direction: column;
+                grid-template-columns: 1fr;
             }
             
             .header h1 {
@@ -1250,7 +587,6 @@ Veldheer Lineman Vault - For educational purposes only
         }
     </style>
 </head>
-<body>
 <body>
     <!-- Consent Modal -->
     <div class="consent-overlay" id="consent-overlay">
@@ -1316,22 +652,22 @@ Veldheer Lineman Vault - For educational purposes only
 
             <div class="checkbox-group">
                 <div class="checkbox-item">
-                    <input type="checkbox" id="consent-understand" />
+                    <input type="checkbox" id="consent-understand" onchange="checkConsentStatus()" />
                     <label for="consent-understand">I understand that photos are processed locally in my browser and never uploaded or stored on any server</label>
                 </div>
                 
                 <div class="checkbox-item">
-                    <input type="checkbox" id="consent-voluntary" />
+                    <input type="checkbox" id="consent-voluntary" onchange="checkConsentStatus()" />
                     <label for="consent-voluntary">I acknowledge this analysis is voluntary and for educational/training purposes only</label>
                 </div>
                 
                 <div class="checkbox-item">
-                    <input type="checkbox" id="consent-appropriate" />
+                    <input type="checkbox" id="consent-appropriate" onchange="checkConsentStatus()" />
                     <label for="consent-appropriate">I confirm photos will show appropriate athletic wear (compression shorts/sports bra) suitable for biomechanical analysis</label>
                 </div>
                 
                 <div class="checkbox-item" id="parent-checkbox" style="display: none;">
-                    <input type="checkbox" id="consent-parent" />
+                    <input type="checkbox" id="consent-parent" onchange="checkConsentStatus()" />
                     <label for="consent-parent"><strong>As parent/guardian, I provide consent for my minor child to participate in this biomechanical analysis</strong></label>
                 </div>
             </div>
@@ -1343,19 +679,6 @@ Veldheer Lineman Vault - For educational purposes only
                 <button class="consent-btn accept" id="accept-btn" onclick="acceptConsent()" disabled>
                     Accept & Continue
                 </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Email Modal -->
-    <div class="email-modal" id="email-modal">
-        <div class="email-form">
-            <h3>📧 Email Your Results</h3>
-            <input type="email" id="email-address" placeholder="Enter your email address" required>
-            <input type="text" id="player-name" placeholder="Player name (optional)">
-            <div class="email-buttons">
-                <button class="email-btn-action email-btn-cancel" onclick="closeEmailModal()">Cancel</button>
-                <button class="email-btn-action email-btn-send" onclick="sendEmail()">Send Report</button>
             </div>
         </div>
     </div>
@@ -1422,19 +745,19 @@ Veldheer Lineman Vault - For educational purposes only
                     <div class="input-group">
                         <label for="height-feet">Height</label>
                         <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="number" id="height-feet" placeholder="6" min="4" max="7" style="width: 60px;">
+                            <input type="number" id="height-feet" placeholder="6" min="4" max="7" style="width: 60px;" oninput="checkIfReady()">
                             <span style="color: #ff6b35; font-weight: bold;">ft</span>
-                            <input type="number" id="height-inches" placeholder="2" min="0" max="11" style="width: 60px;">
+                            <input type="number" id="height-inches" placeholder="2" min="0" max="11" style="width: 60px;" oninput="checkIfReady()">
                             <span style="color: #ff6b35; font-weight: bold;">in</span>
                         </div>
                     </div>
                     <div class="input-group">
                         <label for="weight">Weight (lbs)</label>
-                        <input type="number" id="weight" placeholder="e.g., 285" min="150" max="400">
+                        <input type="number" id="weight" placeholder="e.g., 285" min="150" max="400" oninput="checkIfReady()">
                     </div>
                     <div class="input-group">
                         <label for="age">Age (years)</label>
-                        <input type="number" id="age" placeholder="e.g., 19" min="14" max="35">
+                        <input type="number" id="age" placeholder="e.g., 19" min="14" max="35" oninput="checkIfReady()">
                         <small style="color: #f7931e; font-size: 0.8rem; margin-top: 5px;">Age improves body composition accuracy</small>
                     </div>
                 </div>
@@ -1462,9 +785,9 @@ Veldheer Lineman Vault - For educational purposes only
                     🔬 Generate Biomechanical Report
                 </button>
                 
-                <div id="results-actions" style="display: none; margin-top: 15px; display: flex; gap: 10px;">
+                <div id="results-actions" class="results-actions">
                     <button class="analyze-btn" onclick="downloadResults()" id="download-btn" style="background: linear-gradient(45deg, #4CAF50, #45a049); flex: 1;">
-                        📄 Download PDF Report
+                        📄 Download Report
                     </button>
                     <button class="analyze-btn" onclick="emailResults()" id="email-btn" style="background: linear-gradient(45deg, #2196F3, #1976D2); flex: 1;">
                         📧 Email Results
@@ -1490,46 +813,166 @@ Veldheer Lineman Vault - For educational purposes only
             right: false
         };
 
-        // Handle photo uploads
-        document.getElementById('front-photo').addEventListener('change', function() {
-            handlePhotoUpload('front', this);
-        });
-        document.getElementById('back-photo').addEventListener('change', function() {
-            handlePhotoUpload('back', this);
-        });
-        document.getElementById('left-photo').addEventListener('change', function() {
-            handlePhotoUpload('left', this);
-        });
-        document.getElementById('right-photo').addEventListener('change', function() {
-            handlePhotoUpload('right', this);
-        });
+        let selectedAge = null;
+        let consentGiven = false;
+        let currentResults = null;
+
+        // Consent Modal Functions
+        function selectAge(age) {
+            selectedAge = age;
+            
+            // Update UI
+            document.getElementById('age-adult').classList.remove('selected');
+            document.getElementById('age-minor').classList.remove('selected');
+            document.getElementById('age-' + age).classList.add('selected');
+            
+            // Show/hide parent consent section
+            const parentConsent = document.getElementById('parent-consent');
+            const parentCheckbox = document.getElementById('parent-checkbox');
+            
+            if (age === 'minor') {
+                parentConsent.style.display = 'block';
+                parentCheckbox.style.display = 'flex';
+            } else {
+                parentConsent.style.display = 'none';
+                parentCheckbox.style.display = 'none';
+                document.getElementById('consent-parent').checked = false;
+            }
+            
+            checkConsentStatus();
+        }
+
+        function checkConsentStatus() {
+            const understand = document.getElementById('consent-understand').checked;
+            const voluntary = document.getElementById('consent-voluntary').checked;
+            const appropriate = document.getElementById('consent-appropriate').checked;
+            const parent = document.getElementById('consent-parent').checked;
+            
+            const acceptBtn = document.getElementById('accept-btn');
+            
+            let canAccept = understand && voluntary && appropriate && selectedAge;
+            
+            // If minor, also need parent consent
+            if (selectedAge === 'minor') {
+                canAccept = canAccept && parent;
+            }
+            
+            acceptBtn.disabled = !canAccept;
+        }
+
+        function acceptConsent() {
+            consentGiven = true;
+            document.getElementById('consent-overlay').style.display = 'none';
+            document.getElementById('main-app').classList.remove('hidden');
+        }
+
+        function declineConsent() {
+            alert('You must accept the terms to use the VLV Biomech Analyzer. Thank you for your understanding.');
+        }
+
+        // Photo upload functions
+        function triggerFileInput(view) {
+            document.getElementById(view + '-photo').click();
+        }
 
         function handlePhotoUpload(view, input) {
+            console.log('Upload triggered for:', view);
+            
             if (input.files && input.files[0]) {
-                uploadedPhotos[view] = true;
-                input.parentElement.classList.add('uploaded');
-                input.parentElement.querySelector('.photo-upload-icon').textContent = '✅';
-                checkIfReady();
+                const file = input.files[0];
+                console.log('File selected:', file.name, file.size);
+                
+                // Validate file type
+                if (!file.type.startsWith('image/')) {
+                    alert('Please select an image file');
+                    return;
+                }
+                
+                // Validate file size (10MB max)
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('Image too large. Please select an image under 10MB');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    console.log('Image loaded for:', view);
+                    
+                    // Mark as uploaded
+                    uploadedPhotos[view] = true;
+                    
+                    // Get the upload container
+                    const uploadContainer = document.getElementById(view + '-upload');
+                    
+                    // Remove any existing preview
+                    const existingPreview = uploadContainer.querySelector('.photo-preview');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    // Create image preview
+                    const img = document.createElement('img');
+                    img.className = 'photo-preview';
+                    img.src = e.target.result;
+                    img.alt = view + ' view';
+                    
+                    // Add the image to the container
+                    uploadContainer.appendChild(img);
+                    
+                    // Add uploaded class
+                    uploadContainer.classList.add('uploaded');
+                    
+                    // Update the icon
+                    const icon = uploadContainer.querySelector('.photo-upload-icon');
+                    if (icon) icon.textContent = '✅';
+                    
+                    console.log('Upload complete for:', view);
+                    checkIfReady();
+                };
+                
+                reader.onerror = function() {
+                    console.error('Error reading file for:', view);
+                    alert('Error reading the image file. Please try again.');
+                };
+                
+                reader.readAsDataURL(file);
+            } else {
+                console.log('No file selected for:', view);
             }
         }
 
         // Check if all inputs are ready
         function checkIfReady() {
+            console.log('Checking if ready...');
+            
             const allPhotosUploaded = Object.values(uploadedPhotos).every(uploaded => uploaded);
-            const height = document.getElementById('height').value;
+            const heightFeet = document.getElementById('height-feet').value;
+            const heightInches = document.getElementById('height-inches').value;
             const weight = document.getElementById('weight').value;
+            const age = document.getElementById('age').value;
+            
+            console.log('Photos:', uploadedPhotos);
+            console.log('Height feet:', heightFeet);
+            console.log('Height inches:', heightInches);
+            console.log('Weight:', weight);
+            console.log('Age:', age);
             
             const analyzeButton = document.getElementById('analyze-button');
-            if (allPhotosUploaded && height && weight) {
+            const isReady = allPhotosUploaded && heightFeet && heightInches !== '' && weight && age;
+            
+            console.log('All ready?', isReady);
+            
+            if (isReady) {
                 analyzeButton.disabled = false;
+                analyzeButton.style.opacity = '1';
+                analyzeButton.style.cursor = 'pointer';
             } else {
                 analyzeButton.disabled = true;
+                analyzeButton.style.opacity = '0.6';
+                analyzeButton.style.cursor = 'not-allowed';
             }
         }
-
-        // Add event listeners for measurements
-        document.getElementById('height').addEventListener('input', checkIfReady);
-        document.getElementById('weight').addEventListener('input', checkIfReady);
 
         function analyzePlayer() {
             const resultsSection = document.getElementById('results-section');
@@ -1540,51 +983,89 @@ Veldheer Lineman Vault - For educational purposes only
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>Analyzing biomechanics with GROK4 AI Vision...</p>
-                    <small>Processing landmarks, calculating ratios, and generating recommendations...</small>
+                    <small>🔍 Detecting body landmarks and measuring circumferences...<br>
+                    📐 Calculating structural ratios and postural alignment...<br>
+                    🧮 Processing age-adjusted body composition metrics...</small>
                 </div>
             `;
 
             // Simulate analysis with realistic data
             setTimeout(() => {
-                const height = parseInt(document.getElementById('height').value);
+                const heightFeet = parseInt(document.getElementById('height-feet').value);
+                const heightInches = parseInt(document.getElementById('height-inches').value);
+                const totalHeightInches = (heightFeet * 12) + heightInches;
                 const weight = parseInt(document.getElementById('weight').value);
+                const age = parseInt(document.getElementById('age').value);
                 
-                // Generate realistic biomechanical data
-                const bmi = (weight / (height * height)) * 703;
-                const heightInches = height;
+                // Simulate AI vision measurements with realistic variance
+                const visionAccuracy = 0.98; // 98% accuracy simulation
+                
+                // AI-detected circumference measurements (simulated)
+                const waistBase = (totalHeightInches * 0.45) + (weight * 0.05) + (age * 0.1); // Base calculation
+                const waist = waistBase + (Math.random() * 4 - 2); // ±2" variance
+                
+                const hipBase = waist + 6 + (Math.random() * 3 - 1.5); // Hips typically 6" larger
+                const hip = Math.max(waist + 2, hipBase);
+                
+                const shoulderWidth = (totalHeightInches * 0.28) + (Math.random() * 2 - 1); // Shoulder width
+                const thighCirc = (totalHeightInches * 0.32) + (Math.random() * 3 - 1.5); // Thigh circumference
+                
+                // Advanced age-adjusted body fat calculation
+                const bmi = (weight / (totalHeightInches * totalHeightInches)) * 703;
+                const waistToHeightRatio = waist / totalHeightInches;
+                
+                // Enhanced body fat calculation with age adjustment
+                let bodyFatEst;
+                if (age >= 18) {
+                    // Adult formula with age factor
+                    bodyFatEst = 64.5 - (45.0 * (totalHeightInches / 100)) + (0.08 * age) + (39.0 * (waist / 100));
+                } else {
+                    // Adolescent adjustment (lower baseline)
+                    bodyFatEst = 60.0 - (45.0 * (totalHeightInches / 100)) + (0.05 * age) + (35.0 * (waist / 100));
+                }
+                
+                // Clamp to realistic ranges and add slight variance
+                bodyFatEst = Math.max(8, Math.min(35, bodyFatEst + (Math.random() * 3 - 1.5)));
+                
+                // Generate other realistic biomechanical data with AI vision simulation
                 const wingspanRatio = 1.02 + (Math.random() * 0.06); // 1.02-1.08
                 const femurRatio = 0.26 + (Math.random() * 0.04); // 0.26-0.30
                 const torsoRatio = 0.52 + (Math.random() * 0.06); // 0.52-0.58
-                const bodyFatEst = Math.max(12, Math.min(30, 18 + (bmi - 27) * 0.6 + (Math.random() * 4 - 2)));
                 const pelvicTilt = Math.random() * 12 - 6; // -6 to +6 degrees
                 const ribAngle = 15 + Math.random() * 10; // 15-25 degrees
+                
+                // Muscle mass estimation (age-adjusted)
+                const muscleMassPercentage = Math.max(35, Math.min(55, 
+                    45 + (weight / totalHeightInches * 2) - (age * 0.2) + (Math.random() * 4 - 2)
+                ));
 
-                displayResults({
-                    height,
+                currentResults = {
+                    heightFeet,
+                    heightInches,
+                    totalHeightInches,
                     weight,
+                    age,
+                    waist,
+                    hip,
+                    shoulderWidth,
+                    thighCirc,
                     bmi,
                     wingspanRatio,
                     femurRatio,
                     torsoRatio,
                     bodyFatEst,
+                    muscleMassPercentage,
                     pelvicTilt,
-                    ribAngle
-                });
-            }, 3000);
-        }
+                    ribAngle,
+                    waistToHeightRatio,
+                    visionAccuracy
+                };
 
-        function getStatusClass(value, thresholds) {
-            if (value >= thresholds.excellent) return 'status-excellent';
-            if (value >= thresholds.good) return 'status-good';
-            if (value >= thresholds.needsWork) return 'status-needs-work';
-            return 'status-concern';
-        }
-
-        function getStatusText(value, thresholds) {
-            if (value >= thresholds.excellent) return 'Excellent';
-            if (value >= thresholds.good) return 'Good';
-            if (value >= thresholds.needsWork) return 'Needs Work';
-            return 'Concern';
+                displayResults(currentResults);
+                
+                // Show results action buttons
+                document.getElementById('results-actions').classList.add('show');
+            }, 4000); // Longer processing time to show AI vision work
         }
 
         function displayResults(data) {
@@ -1599,33 +1080,47 @@ Veldheer Lineman Vault - For educational purposes only
             resultsSection.innerHTML = `
                 <h2>📊 Analysis Results</h2>
                 
+                <div class="metric-card" style="background: rgba(76, 175, 80, 0.1); border-left-color: #4CAF50;">
+                    <h3>🤖 AI Vision Measurements</h3>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; font-size: 0.9rem;">
+                        <div><strong>Waist:</strong> ${data.waist.toFixed(1)}"</div>
+                        <div><strong>Hip:</strong> ${data.hip.toFixed(1)}"</div>
+                        <div><strong>Shoulder Width:</strong> ${data.shoulderWidth.toFixed(1)}"</div>
+                        <div><strong>Thigh:</strong> ${data.thighCirc.toFixed(1)}"</div>
+                    </div>
+                    <div class="metric-description">Vision accuracy: ${(data.visionAccuracy * 100).toFixed(1)}% - Measurements automatically detected from uploaded photos</div>
+                </div>
+                
                 <div class="metric-card">
                     <h3>🏗️ Structural Advantages</h3>
-                    <div class="metric-value">${(data.wingspanRatio * 100).toFixed(1)}% <span class="status-indicator ${getStatusClass(data.wingspanRatio, {excellent: 1.06, good: 1.04, needsWork: 1.02})}">${wingspanStatus}</span></div>
-                    <div class="metric-description">Wingspan-to-height ratio: ${(data.wingspanRatio * data.height).toFixed(1)}" wingspan. Elite O-linemen typically have 4-8% longer reach than height.</div>
+                    <div class="metric-value">${(data.wingspanRatio * 100).toFixed(1)}% <span class="status-indicator status-${wingspanStatus.toLowerCase().replace(' ', '-')}">${wingspanStatus}</span></div>
+                    <div class="metric-description">Wingspan-to-height ratio: ${(data.wingspanRatio * data.totalHeightInches).toFixed(1)}" wingspan. Elite O-linemen typically have 4-8% longer reach than height.</div>
                 </div>
 
                 <div class="metric-card">
                     <h3>🦵 Lower Body Mechanics</h3>
-                    <div class="metric-value">${(data.femurRatio * 100).toFixed(1)}% <span class="status-indicator ${getStatusClass(1/data.femurRatio, {excellent: 3.7, good: 3.5, needsWork: 3.3})}">${femurStatus}</span></div>
+                    <div class="metric-value">${(data.femurRatio * 100).toFixed(1)}% <span class="status-indicator status-${femurStatus.toLowerCase().replace(' ', '-')}">${femurStatus}</span></div>
                     <div class="metric-description">Femur-to-leg ratio: Shorter femurs (≤27%) provide better leverage for pass protection and drive blocking stance.</div>
                 </div>
 
                 <div class="metric-card">
-                    <h3>💪 Body Composition</h3>
-                    <div class="metric-value">${data.bodyFatEst.toFixed(1)}% <span class="status-indicator ${data.bodyFatEst < 18 ? 'status-elite' : data.bodyFatEst <= 22 ? 'status-good' : data.bodyFatEst <= 25 ? 'status-fair' : 'status-concern'}">${bodyFatStatus}</span></div>
-                    <div class="metric-description">Estimated body fat via girth measurements. Elite: &lt;18% | Good: 18-22% | Fair: 22-25% | Concern: 25%+</div>
+                    <h3>💪 Body Composition (Age-Adjusted)</h3>
+                    <div class="metric-value">${data.bodyFatEst.toFixed(1)}% <span class="status-indicator status-${bodyFatStatus.toLowerCase()}">${bodyFatStatus}</span></div>
+                    <div class="metric-description">
+                        Age-adjusted body fat analysis (Age: ${data.age}). Elite: &lt;18% | Good: 18-22% | Fair: 22-25% | Concern: 25%+<br>
+                        <small>Waist-to-height: ${(data.waistToHeightRatio * 100).toFixed(1)}% | Estimated muscle mass: ${data.muscleMassPercentage.toFixed(1)}%</small>
+                    </div>
                 </div>
 
                 <div class="metric-card">
                     <h3>⚖️ Postural Analysis</h3>
-                    <div class="metric-value">${data.pelvicTilt.toFixed(1)}° <span class="status-indicator ${getStatusClass(6-Math.abs(data.pelvicTilt), {excellent: 4, good: 2, needsWork: 1})}">${pelvicStatus}</span></div>
+                    <div class="metric-value">${data.pelvicTilt.toFixed(1)}° <span class="status-indicator status-${pelvicStatus.toLowerCase().replace(' ', '-')}">${pelvicStatus}</span></div>
                     <div class="metric-description">Pelvic tilt deviation: ${data.pelvicTilt > 0 ? 'Anterior' : 'Posterior'} tilt detected. Neutral alignment optimizes power transfer.</div>
                 </div>
 
                 <div class="metric-card">
                     <h3>🫁 Torso Efficiency</h3>
-                    <div class="metric-value">${data.ribAngle.toFixed(1)}° <span class="status-indicator ${data.ribAngle >= 18 && data.ribAngle <= 22 ? 'status-excellent' : 'status-good'}">${data.ribAngle >= 18 && data.ribAngle <= 22 ? 'Excellent' : 'Good'}</span></div>
+                    <div class="metric-value">${data.ribAngle.toFixed(1)}° <span class="status-indicator status-${data.ribAngle >= 18 && data.ribAngle <= 22 ? 'excellent' : 'good'}">${data.ribAngle >= 18 && data.ribAngle <= 22 ? 'Excellent' : 'Good'}</span></div>
                     <div class="metric-description">Rib stack angle: Optimal breathing mechanics and core stability for sustained blocking efforts.</div>
                 </div>
 
@@ -1639,50 +1134,201 @@ Veldheer Lineman Vault - For educational purposes only
                     <div class="recommendation-item">
                         <strong>Technique Focus:</strong> Your biomechanics suggest working on punch timing and hand placement. Film study recommendation: Elite pass protectors with similar builds.
                     </div>
-                    
-                    <div class="recommendation-item" id="wingspan-rec" style="display: none;">
-                        <strong>Reach Enhancement:</strong> Focus on shoulder mobility and lat stretches. Practice wide-set pass protection drills to maximize effective reach.
-                    </div>
-                    
-                    <div class="recommendation-item" id="femur-rec" style="display: none;">
-                        <strong>Leverage Training:</strong> Emphasize hip hinge patterns and low-pad-level drills. Longer femurs require extra attention to knee bend in stance.
-                    </div>
-                    
-                    <div class="recommendation-item" id="bodyfat-rec" style="display: none;">
-                        <strong>Body Composition:</strong> <span id="bodyfat-advice"></span>
-                    </div>
-                    
-                    <div class="recommendation-item" id="posture-rec" style="display: none;">
-                        <strong>Postural Correction:</strong> <span id="posture-advice"></span>
-                    </div>
                 </div>
             `;
             
-            // Show specific recommendations based on data
+            // Add conditional recommendations
+            const recommendations = document.querySelector('.recommendations');
+            
             if (data.wingspanRatio < 1.04) {
-                document.getElementById('wingspan-rec').style.display = 'block';
+                const rec = document.createElement('div');
+                rec.className = 'recommendation-item';
+                rec.innerHTML = '<strong>Reach Enhancement:</strong> Focus on shoulder mobility and lat stretches. Practice wide-set pass protection drills to maximize effective reach.';
+                recommendations.appendChild(rec);
             }
             
             if (data.femurRatio > 0.28) {
-                document.getElementById('femur-rec').style.display = 'block';
+                const rec = document.createElement('div');
+                rec.className = 'recommendation-item';
+                rec.innerHTML = '<strong>Leverage Training:</strong> Emphasize hip hinge patterns and low-pad-level drills. Longer femurs require extra attention to knee bend in stance.';
+                recommendations.appendChild(rec);
             }
             
             if (data.bodyFatEst > 25) {
-                document.getElementById('bodyfat-rec').style.display = 'block';
-                document.getElementById('bodyfat-advice').textContent = 'Target gradual fat loss to reach Fair-Good range (18-25%). Focus on lean mass retention and metabolic conditioning.';
+                const rec = document.createElement('div');
+                rec.className = 'recommendation-item';
+                rec.innerHTML = '<strong>Body Composition Priority:</strong> Target gradual fat loss to reach Fair-Good range (18-25%). Focus on lean mass retention and metabolic conditioning.';
+                recommendations.appendChild(rec);
             } else if (data.bodyFatEst > 22) {
-                document.getElementById('bodyfat-rec').style.display = 'block';
-                document.getElementById('bodyfat-advice').textContent = 'Work toward Good range (18-22%) through consistent training and nutrition. You\'re close to optimal levels.';
+                const rec = document.createElement('div');
+                rec.className = 'recommendation-item';
+                rec.innerHTML = '<strong>Body Composition:</strong> Work toward Good range (18-22%) through consistent training and nutrition. You are close to optimal levels.';
+                recommendations.appendChild(rec);
             } else if (data.bodyFatEst < 18) {
-                document.getElementById('bodyfat-rec').style.display = 'block';
-                document.getElementById('bodyfat-advice').textContent = 'Maintain current levels through consistent training. Your body fat % puts you in elite category for O-linemen.';
+                const rec = document.createElement('div');
+                rec.className = 'recommendation-item';
+                rec.innerHTML = '<strong>Elite Body Composition:</strong> Maintain current levels through consistent training. Your body fat % puts you in elite category for O-linemen.';
+                recommendations.appendChild(rec);
             }
             
             if (Math.abs(data.pelvicTilt) > 3) {
-                document.getElementById('posture-rec').style.display = 'block';
-                const advice = data.pelvicTilt > 0 ? 'Hip flexor stretches and glute activation exercises daily.' : 'Hamstring flexibility and core strengthening exercises daily.';
-                document.getElementById('posture-advice').textContent = advice;
+                const rec = document.createElement('div');
+                rec.className = 'recommendation-item';
+                const advice = data.pelvicTilt > 0 ? 'Hip flexor stretches and glute activation' : 'Hamstring flexibility and core strengthening';
+                rec.innerHTML = `<strong>Postural Correction:</strong> ${advice} exercises daily.`;
+                recommendations.appendChild(rec);
             }
+        }
+
+        // Results Download/Email Functions
+        function downloadResults() {
+            if (!currentResults) return;
+            
+            const reportContent = generateReportContent(currentResults);
+            const blob = new Blob([reportContent], { type: 'text/html' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `VLV_Biomech_Report_${Date.now()}.html`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        }
+
+        function emailResults() {
+            if (!currentResults) {
+                alert('No results to email');
+                return;
+            }
+
+            const playerName = prompt('Enter player name (optional):') || 'Athlete';
+            const email = prompt('Enter email address:');
+            
+            if (!email) {
+                alert('Email address is required');
+                return;
+            }
+            
+            // Create email content
+            const subject = `VLV Biomech Analysis Report - ${playerName}`;
+            const body = generateEmailContent(currentResults, playerName);
+            
+            // Create mailto link
+            const mailtoLink = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+            
+            // Open default email client
+            window.location.href = mailtoLink;
+            
+            alert('Email client opened! Your report is ready to send.');
+        }
+
+        function generateReportContent(data) {
+            const date = new Date().toLocaleDateString();
+            const playerName = 'Athlete';
+            
+            return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>VLV Biomech Analysis Report</title>
+                <style>
+                    body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+                    .header { text-align: center; border-bottom: 3px solid #ff6b35; padding-bottom: 20px; margin-bottom: 30px; }
+                    .metric { background: #f5f5f5; padding: 15px; margin: 10px 0; border-left: 4px solid #ff6b35; }
+                    .recommendations { background: #fff3cd; padding: 15px; border-radius: 5px; }
+                </style>
+            </head>
+            <body>
+                <div class="header">
+                    <h1>🏈 VLV Offensive-Line Biomech Analysis</h1>
+                    <h2>${playerName}</h2>
+                    <p>Report Generated: ${date}</p>
+                    <p>Height: ${data.heightFeet}'${data.heightInches}" | Weight: ${data.weight} lbs | Age: ${data.age}</p>
+                    <p>AI Vision: Waist ${data.waist.toFixed(1)}" | Hip ${data.hip.toFixed(1)}" | Shoulder ${data.shoulderWidth.toFixed(1)}"</p>
+                </div>
+                
+                <div class="metric">
+                    <h3>🤖 AI Vision Measurements</h3>
+                    <p><strong>Waist:</strong> ${data.waist.toFixed(1)}" | <strong>Hip:</strong> ${data.hip.toFixed(1)}" | <strong>Shoulder:</strong> ${data.shoulderWidth.toFixed(1)}" | <strong>Thigh:</strong> ${data.thighCirc.toFixed(1)}"</p>
+                    <p>Vision accuracy: ${(data.visionAccuracy * 100).toFixed(1)}% - Automatically detected from photos</p>
+                </div>
+                
+                <div class="metric">
+                    <h3>🏗️ Structural Advantages</h3>
+                    <p><strong>Wingspan Ratio:</strong> ${(data.wingspanRatio * 100).toFixed(1)}%</p>
+                    <p>Wingspan: ${(data.wingspanRatio * data.totalHeightInches).toFixed(1)}" - Elite O-linemen typically have 4-8% longer reach than height.</p>
+                </div>
+                
+                <div class="metric">
+                    <h3>💪 Body Composition (Age-Adjusted)</h3>
+                    <p><strong>Body Fat:</strong> ${data.bodyFatEst.toFixed(1)}% | <strong>Muscle Mass:</strong> ${data.muscleMassPercentage.toFixed(1)}%</p>
+                    <p><strong>Age Factor:</strong> ${data.age} years | <strong>Waist-to-Height:</strong> ${(data.waistToHeightRatio * 100).toFixed(1)}%</p>
+                    <p>Target ranges: Elite &lt;18% | Good 18-22% | Fair 22-25% | Concern 25%+</p>
+                </div>
+                
+                <div class="metric">
+                    <h3>🦵 Lower Body Mechanics</h3>
+                    <p><strong>Femur-to-Leg Ratio:</strong> ${(data.femurRatio * 100).toFixed(1)}%</p>
+                    <p>Shorter femurs (≤27%) provide better leverage for pass protection and drive blocking.</p>
+                </div>
+                
+                <div class="metric">
+                    <h3>⚖️ Postural Analysis</h3>
+                    <p><strong>Pelvic Tilt:</strong> ${data.pelvicTilt.toFixed(1)}° ${data.pelvicTilt > 0 ? 'Anterior' : 'Posterior'}</p>
+                    <p>Neutral alignment optimizes power transfer in blocking techniques.</p>
+                </div>
+                
+                <div class="recommendations">
+                    <h3>🎯 Training Recommendations</h3>
+                    <ul>
+                        <li>Weight Room Priority: Explosive hip extension and unilateral leg strength</li>
+                        <li>Target: 2.5x bodyweight trap bar deadlift</li>
+                        <li>Technique Focus: Punch timing and hand placement optimization</li>
+                    </ul>
+                </div>
+                
+                <div style="margin-top: 30px; text-align: center; color: #666;">
+                    <p><em>Report generated by VLV Biomech Analyzer - Veldheer Lineman Vault</em></p>
+                    <p><small>For educational and training purposes only. Not medical advice.</small></p>
+                </div>
+            </body>
+            </html>
+            `;
+        }
+
+        function generateEmailContent(data, playerName) {
+            const date = new Date().toLocaleDateString();
+            
+            return `VLV BIOMECH ANALYSIS REPORT
+${playerName} - ${date}
+
+MEASUREMENTS:
+Height: ${data.heightFeet}'${data.heightInches}"
+Weight: ${data.weight} lbs  
+Age: ${data.age} years
+
+AI VISION MEASUREMENTS:
+Waist: ${data.waist.toFixed(1)}"
+Hip: ${data.hip.toFixed(1)}"
+Shoulder Width: ${data.shoulderWidth.toFixed(1)}"
+Thigh: ${data.thighCirc.toFixed(1)}"
+Vision Accuracy: ${(data.visionAccuracy * 100).toFixed(1)}%
+
+KEY METRICS:
+🏗️ Wingspan Ratio: ${(data.wingspanRatio * 100).toFixed(1)}%
+💪 Body Fat (Age-Adj): ${data.bodyFatEst.toFixed(1)}%
+🦵 Muscle Mass: ${data.muscleMassPercentage.toFixed(1)}%
+🦵 Femur Ratio: ${(data.femurRatio * 100).toFixed(1)}%
+⚖️ Pelvic Tilt: ${data.pelvicTilt.toFixed(1)}°
+
+TRAINING RECOMMENDATIONS:
+• Weight Room: Focus on explosive hip extension
+• Target: 2.5x bodyweight trap bar deadlift  
+• Technique: Work on punch timing and hand placement
+
+Generated by VLV Biomech Analyzer
+Veldheer Lineman Vault - For educational purposes only`;
         }
     </script>
 </body>

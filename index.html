@@ -1066,7 +1066,55 @@
         }
 
         function analyzePlayer() {
+            if (!consentGiven) {
+                alert('Please complete consent process first');
+                return;
+            }
+            
+            // Reset analysis runs for new analysis
+            analysisRuns = [];
+            
             const resultsSection = document.getElementById('results-section');
+            if (!resultsSection) {
+                console.error('Results section not found');
+                return;
+            }
+            
+            // Validate inputs before starting
+            const heightFeet = document.getElementById('height-feet');
+            const heightInches = document.getElementById('height-inches');
+            const weight = document.getElementById('weight');
+            const age = document.getElementById('age');
+            
+            if (!heightFeet || !heightInches || !weight || !age) {
+                alert('Please fill in all measurement fields');
+                return;
+            }
+            
+            const heightFeetVal = parseInt(heightFeet.value);
+            const heightInchesVal = parseInt(heightInches.value);
+            const weightVal = parseInt(weight.value);
+            const ageVal = parseInt(age.value);
+            
+            if (isNaN(heightFeetVal) || isNaN(heightInchesVal) || isNaN(weightVal) || isNaN(ageVal)) {
+                alert('Please enter valid numeric values for all measurements');
+                return;
+            }
+            
+            if (heightFeetVal < 4 || heightFeetVal > 7 || heightInchesVal < 0 || heightInchesVal > 11) {
+                alert('Please enter valid height (4\'0" - 7\'11")');
+                return;
+            }
+            
+            if (weightVal < 150 || weightVal > 400) {
+                alert('Please enter valid weight (150-400 lbs)');
+                return;
+            }
+            
+            if (ageVal < 14 || ageVal > 35) {
+                alert('Please enter valid age (14-35 years)');
+                return;
+            }
             
             // Show loading state with multiple analysis cycles
             resultsSection.innerHTML = `
@@ -1083,7 +1131,6 @@
             `;
 
             // Run 5 analysis cycles for accuracy
-            let analysisRuns = [];
             let currentCycle = 0;
             
             function runAnalysisCycle() {
@@ -1100,80 +1147,90 @@
                 }
                 
                 setTimeout(() => {
-                    const heightFeet = parseInt(document.getElementById('height-feet').value);
-                    const heightInches = parseInt(document.getElementById('height-inches').value);
-                    const totalHeightInches = (heightFeet * 12) + heightInches;
-                    const weight = parseInt(document.getElementById('weight').value);
-                    const age = parseInt(document.getElementById('age').value);
-                    
-                    // Generate individual analysis run with realistic variance
-                    const cycleVariance = (Math.random() * 0.06 - 0.03); // ±3% variance per cycle
-                    
-                    // Realistic body measurements with individual variance
-                    const waistBase = 28 + (weight / 50) + (totalHeightInches / 30) + (age / 15);
-                    const waist = Math.max(28, Math.min(50, waistBase + (Math.random() * 3 - 1.5) + (cycleVariance * 20)));
-                    
-                    const shoulderBase = 38 + (totalHeightInches / 3.5) + (weight / 12);
-                    const shoulderWidth = Math.max(40, Math.min(55, shoulderBase + (Math.random() * 4 - 2) + (cycleVariance * 30)));
-                    
-                    const hipBase = waist + 4 + (weight / 60);
-                    const hip = Math.max(waist + 2, hipBase + (Math.random() * 3 - 1.5));
-                    
-                    const thighBase = 22 + (weight / 12) + (totalHeightInches / 35);
-                    const thighCirc = Math.max(22, Math.min(35, thighBase + (Math.random() * 3 - 1.5)));
-                    
-                    // Advanced body composition with multiple factors
-                    const bmi = (weight / (totalHeightInches * totalHeightInches)) * 703;
-                    const waistToHeightRatio = waist / totalHeightInches;
-                    
-                    let bodyFatEst;
-                    if (age >= 18) {
-                        bodyFatEst = 8 + (waist - 28) * 0.7 + (bmi - 25) * 0.5 + (age - 18) * 0.15;
-                    } else {
-                        bodyFatEst = 6 + (waist - 28) * 0.6 + (bmi - 23) * 0.4 + (age - 14) * 0.2;
-                    }
-                    bodyFatEst = Math.max(8, Math.min(30, bodyFatEst + (Math.random() * 2 - 1) + (cycleVariance * 8)));
-                    
-                    // Biomechanical ratios with variance
-                    const wingspanRatio = 1.02 + (Math.random() * 0.06) + (cycleVariance * 0.5);
-                    const femurRatio = 0.26 + (Math.random() * 0.04) + (cycleVariance * 0.3);
-                    const torsoRatio = 0.52 + (Math.random() * 0.06) + (cycleVariance * 0.4);
-                    const pelvicTilt = (Math.random() * 12 - 6) + (cycleVariance * 20);
-                    const ribAngle = 15 + (Math.random() * 10) + (cycleVariance * 15);
-                    
-                    const muscleMassPercentage = Math.max(35, Math.min(55, 
-                        45 + (weight / totalHeightInches * 2.2) - (age * 0.15) + (Math.random() * 3 - 1.5)
-                    ));
+                    try {
+                        const totalHeightInches = (heightFeetVal * 12) + heightInchesVal;
+                        
+                        // Generate individual analysis run with realistic variance
+                        const cycleVariance = (Math.random() * 0.06 - 0.03); // ±3% variance per cycle
+                        
+                        // Realistic body measurements with individual variance
+                        const waistBase = 28 + (weightVal / 50) + (totalHeightInches / 30) + (ageVal / 15);
+                        const waist = Math.max(28, Math.min(50, waistBase + (Math.random() * 3 - 1.5) + (cycleVariance * 20)));
+                        
+                        const shoulderBase = 38 + (totalHeightInches / 3.5) + (weightVal / 12);
+                        const shoulderWidth = Math.max(40, Math.min(55, shoulderBase + (Math.random() * 4 - 2) + (cycleVariance * 30)));
+                        
+                        const hipBase = waist + 4 + (weightVal / 60);
+                        const hip = Math.max(waist + 2, hipBase + (Math.random() * 3 - 1.5));
+                        
+                        const thighBase = 22 + (weightVal / 12) + (totalHeightInches / 35);
+                        const thighCirc = Math.max(22, Math.min(35, thighBase + (Math.random() * 3 - 1.5)));
+                        
+                        // Advanced body composition with multiple factors
+                        const bmi = (weightVal / (totalHeightInches * totalHeightInches)) * 703;
+                        const waistToHeightRatio = waist / totalHeightInches;
+                        
+                        let bodyFatEst;
+                        if (ageVal >= 18) {
+                            bodyFatEst = 8 + (waist - 28) * 0.7 + (bmi - 25) * 0.5 + (ageVal - 18) * 0.15;
+                        } else {
+                            bodyFatEst = 6 + (waist - 28) * 0.6 + (bmi - 23) * 0.4 + (ageVal - 14) * 0.2;
+                        }
+                        bodyFatEst = Math.max(8, Math.min(30, bodyFatEst + (Math.random() * 2 - 1) + (cycleVariance * 8)));
+                        
+                        // Biomechanical ratios with variance
+                        const wingspanRatio = 1.02 + (Math.random() * 0.06) + (cycleVariance * 0.5);
+                        const femurRatio = 0.26 + (Math.random() * 0.04) + (cycleVariance * 0.3);
+                        const torsoRatio = 0.52 + (Math.random() * 0.06) + (cycleVariance * 0.4);
+                        const pelvicTilt = (Math.random() * 12 - 6) + (cycleVariance * 20);
+                        const ribAngle = 15 + (Math.random() * 10) + (cycleVariance * 15);
+                        
+                        const muscleMassPercentage = Math.max(35, Math.min(55, 
+                            45 + (weightVal / totalHeightInches * 2.2) - (ageVal * 0.15) + (Math.random() * 3 - 1.5)
+                        ));
 
-                    // Store this cycle's results
-                    analysisRuns.push({
-                        heightFeet,
-                        heightInches,
-                        totalHeightInches,
-                        weight,
-                        age,
-                        waist,
-                        hip,
-                        shoulderWidth,
-                        thighCirc,
-                        bmi,
-                        wingspanRatio,
-                        femurRatio,
-                        torsoRatio,
-                        bodyFatEst,
-                        muscleMassPercentage,
-                        pelvicTilt,
-                        ribAngle,
-                        waistToHeightRatio,
-                        cycle: currentCycle
-                    });
-                    
-                    if (currentCycle < 5) {
-                        // Continue to next cycle
-                        setTimeout(runAnalysisCycle, 800);
-                    } else {
-                        // All cycles complete - calculate averages and generate personalized report
-                        calculateFinalResults();
+                        // Store this cycle's results
+                        analysisRuns.push({
+                            heightFeet: heightFeetVal,
+                            heightInches: heightInchesVal,
+                            totalHeightInches,
+                            weight: weightVal,
+                            age: ageVal,
+                            waist,
+                            hip,
+                            shoulderWidth,
+                            thighCirc,
+                            bmi,
+                            wingspanRatio,
+                            femurRatio,
+                            torsoRatio,
+                            bodyFatEst,
+                            muscleMassPercentage,
+                            pelvicTilt,
+                            ribAngle,
+                            waistToHeightRatio,
+                            cycle: currentCycle
+                        });
+                        
+                        if (currentCycle < 5) {
+                            // Continue to next cycle
+                            setTimeout(runAnalysisCycle, 800);
+                        } else {
+                            // All cycles complete - calculate averages and generate personalized report
+                            calculateFinalResults();
+                        }
+                    } catch (error) {
+                        console.error('Error in analysis cycle:', error);
+                        const resultsSection = document.getElementById('results-section');
+                        if (resultsSection) {
+                            resultsSection.innerHTML = `
+                                <h2>📊 Analysis Error</h2>
+                                <div style="text-align: center; padding: 40px; color: #ff6b35;">
+                                    <p>An error occurred during analysis. Please try again.</p>
+                                    <button onclick="location.reload()" class="analyze-btn" style="margin-top: 20px;">Restart Analysis</button>
+                                </div>
+                            `;
+                        }
                     }
                 }, 1000);
             }
@@ -1183,45 +1240,67 @@
         }
 
         function calculateFinalResults() {
-            // Average all 5 analysis runs for maximum accuracy
-            const avgResults = {
-                heightFeet: analysisRuns[0].heightFeet,
-                heightInches: analysisRuns[0].heightInches,
-                totalHeightInches: analysisRuns[0].totalHeightInches,
-                weight: analysisRuns[0].weight,
-                age: analysisRuns[0].age,
-                waist: analysisRuns.reduce((sum, run) => sum + run.waist, 0) / 5,
-                hip: analysisRuns.reduce((sum, run) => sum + run.hip, 0) / 5,
-                shoulderWidth: analysisRuns.reduce((sum, run) => sum + run.shoulderWidth, 0) / 5,
-                thighCirc: analysisRuns.reduce((sum, run) => sum + run.thighCirc, 0) / 5,
-                bmi: analysisRuns[0].bmi,
-                wingspanRatio: analysisRuns.reduce((sum, run) => sum + run.wingspanRatio, 0) / 5,
-                femurRatio: analysisRuns.reduce((sum, run) => sum + run.femurRatio, 0) / 5,
-                torsoRatio: analysisRuns.reduce((sum, run) => sum + run.torsoRatio, 0) / 5,
-                bodyFatEst: analysisRuns.reduce((sum, run) => sum + run.bodyFatEst, 0) / 5,
-                muscleMassPercentage: analysisRuns.reduce((sum, run) => sum + run.muscleMassPercentage, 0) / 5,
-                pelvicTilt: analysisRuns.reduce((sum, run) => sum + run.pelvicTilt, 0) / 5,
-                ribAngle: analysisRuns.reduce((sum, run) => sum + run.ribAngle, 0) / 5,
-                waistToHeightRatio: 0,
-                visionAccuracy: 0.987 // High accuracy from 5-run average
-            };
+            if (!analysisRuns || analysisRuns.length !== 5) {
+                console.error('Invalid analysis runs data');
+                return;
+            }
             
-            avgResults.waistToHeightRatio = avgResults.waist / avgResults.totalHeightInches;
-            
-            // Calculate measurement variance for accuracy reporting
-            const waistVariance = Math.sqrt(analysisRuns.reduce((sum, run) => sum + Math.pow(run.waist - avgResults.waist, 2), 0) / 5);
-            const shoulderVariance = Math.sqrt(analysisRuns.reduce((sum, run) => sum + Math.pow(run.shoulderWidth - avgResults.shoulderWidth, 2), 0) / 5);
-            
-            avgResults.measurementVariance = {
-                waist: waistVariance,
-                shoulder: shoulderVariance
-            };
-            
-            currentResults = avgResults;
-            displayEliteResults(avgResults);
-            
-            // Show results action buttons
-            document.getElementById('results-actions').classList.add('show');
+            try {
+                // Average all 5 analysis runs for maximum accuracy
+                const avgResults = {
+                    heightFeet: analysisRuns[0].heightFeet,
+                    heightInches: analysisRuns[0].heightInches,
+                    totalHeightInches: analysisRuns[0].totalHeightInches,
+                    weight: analysisRuns[0].weight,
+                    age: analysisRuns[0].age,
+                    waist: analysisRuns.reduce((sum, run) => sum + run.waist, 0) / 5,
+                    hip: analysisRuns.reduce((sum, run) => sum + run.hip, 0) / 5,
+                    shoulderWidth: analysisRuns.reduce((sum, run) => sum + run.shoulderWidth, 0) / 5,
+                    thighCirc: analysisRuns.reduce((sum, run) => sum + run.thighCirc, 0) / 5,
+                    bmi: analysisRuns[0].bmi,
+                    wingspanRatio: analysisRuns.reduce((sum, run) => sum + run.wingspanRatio, 0) / 5,
+                    femurRatio: analysisRuns.reduce((sum, run) => sum + run.femurRatio, 0) / 5,
+                    torsoRatio: analysisRuns.reduce((sum, run) => sum + run.torsoRatio, 0) / 5,
+                    bodyFatEst: analysisRuns.reduce((sum, run) => sum + run.bodyFatEst, 0) / 5,
+                    muscleMassPercentage: analysisRuns.reduce((sum, run) => sum + run.muscleMassPercentage, 0) / 5,
+                    pelvicTilt: analysisRuns.reduce((sum, run) => sum + run.pelvicTilt, 0) / 5,
+                    ribAngle: analysisRuns.reduce((sum, run) => sum + run.ribAngle, 0) / 5,
+                    waistToHeightRatio: 0,
+                    visionAccuracy: 0.987 // High accuracy from 5-run average
+                };
+                
+                avgResults.waistToHeightRatio = avgResults.waist / avgResults.totalHeightInches;
+                
+                // Calculate measurement variance for accuracy reporting
+                const waistVariance = Math.sqrt(analysisRuns.reduce((sum, run) => sum + Math.pow(run.waist - avgResults.waist, 2), 0) / 5);
+                const shoulderVariance = Math.sqrt(analysisRuns.reduce((sum, run) => sum + Math.pow(run.shoulderWidth - avgResults.shoulderWidth, 2), 0) / 5);
+                
+                avgResults.measurementVariance = {
+                    waist: waistVariance,
+                    shoulder: shoulderVariance
+                };
+                
+                currentResults = avgResults;
+                displayEliteResults(avgResults);
+                
+                // Show results action buttons
+                const resultsActions = document.getElementById('results-actions');
+                if (resultsActions) {
+                    resultsActions.classList.add('show');
+                }
+            } catch (error) {
+                console.error('Error calculating results:', error);
+                const resultsSection = document.getElementById('results-section');
+                if (resultsSection) {
+                    resultsSection.innerHTML = `
+                        <h2>📊 Analysis Error</h2>
+                        <div style="text-align: center; padding: 40px; color: #ff6b35;">
+                            <p>Error processing analysis results. Please try again.</p>
+                            <button onclick="location.reload()" class="analyze-btn" style="margin-top: 20px;">Restart Analysis</button>
+                        </div>
+                    `;
+                }
+            }
         }
 
         function displayEliteResults(data) {

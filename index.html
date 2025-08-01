@@ -467,16 +467,20 @@
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            position: relative;
+            z-index: 10;
         }
 
         .age-option:hover {
             border-color: #ff6b35;
             background: rgba(255, 107, 53, 0.2);
             transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
 
         .age-option:active {
             transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .age-option.selected {
@@ -638,11 +642,11 @@
                 <h3>📅 Age Verification Required</h3>
                 <p>Please confirm your age category:</p>
                 <div class="age-options">
-                    <div class="age-option" id="age-adult" onclick="selectAge('adult')">
+                    <div class="age-option" id="age-adult">
                         <strong>18+ Years Old</strong><br>
                         <small>Adult participant</small>
                     </div>
-                    <div class="age-option" id="age-minor" onclick="selectAge('minor')">
+                    <div class="age-option" id="age-minor">
                         <strong>Under 18</strong><br>
                         <small>Minor participant</small>
                     </div>
@@ -903,48 +907,76 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('DOM loaded, initializing consent system');
             
-            // Ensure all elements exist
-            const elements = [
-                'consent-understand',
-                'consent-voluntary', 
-                'consent-appropriate',
-                'consent-parent',
-                'age-adult',
-                'age-minor',
-                'accept-btn'
-            ];
-            
-            elements.forEach(id => {
-                const element = document.getElementById(id);
-                if (element) {
-                    console.log(`Found element: ${id}`);
-                } else {
-                    console.warn(`Missing element: ${id}`);
-                }
-            });
-            
-            // Add click event listeners to age buttons as backup
+            // Force age selection setup
+            setTimeout(function() {
+                setupAgeSelection();
+            }, 100);
+        });
+
+        function setupAgeSelection() {
+            // Get age buttons
             const adultBtn = document.getElementById('age-adult');
             const minorBtn = document.getElementById('age-minor');
             
+            console.log('Setting up age selection...');
+            console.log('Adult button found:', !!adultBtn);
+            console.log('Minor button found:', !!minorBtn);
+            
             if (adultBtn) {
+                // Remove any existing listeners
+                adultBtn.removeAttribute('onclick');
+                
+                // Add multiple event types for maximum compatibility
                 adultBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Adult button clicked');
+                    console.log('Adult button clicked via addEventListener');
                     selectAge('adult');
                 });
+                
+                adultBtn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    console.log('Adult button touched');
+                    selectAge('adult');
+                });
+                
+                // Add direct onclick as backup
+                adultBtn.onclick = function(e) {
+                    e.preventDefault();
+                    console.log('Adult button clicked via onclick');
+                    selectAge('adult');
+                };
             }
             
             if (minorBtn) {
+                // Remove any existing listeners
+                minorBtn.removeAttribute('onclick');
+                
+                // Add multiple event types for maximum compatibility
                 minorBtn.addEventListener('click', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('Minor button clicked');
+                    console.log('Minor button clicked via addEventListener');
                     selectAge('minor');
                 });
+                
+                minorBtn.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    console.log('Minor button touched');
+                    selectAge('minor');
+                });
+                
+                // Add direct onclick as backup
+                minorBtn.onclick = function(e) {
+                    e.preventDefault();
+                    console.log('Minor button clicked via onclick');
+                    selectAge('minor');
+                };
             }
-        });
+            
+            // Test click functionality
+            console.log('Age selection setup complete');
+        }
 
         // Photo upload functions
         function triggerFileInput(view) {
@@ -954,25 +986,30 @@
         function handlePhotoUpload(view, input) {
             console.log('Upload triggered for:', view);
             
-            if (input.files && input.files[0]) {
-                const file = input.files[0];
-                console.log('File selected:', file.name, file.size);
-                
-                // Validate file type
-                if (!file.type.startsWith('image/')) {
-                    alert('Please select an image file');
-                    return;
-                }
-                
-                // Validate file size (10MB max)
-                if (file.size > 10 * 1024 * 1024) {
-                    alert('Image too large. Please select an image under 10MB');
-                    return;
-                }
-                
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
+            if (!input || !input.files || !input.files[0]) {
+                console.log('No file selected for:', view);
+                return;
+            }
+            
+            const file = input.files[0];
+            console.log('File selected:', file.name, file.size);
+            
+            // Validate file type
+            if (!file.type.startsWith('image/')) {
+                alert('Please select an image file (JPG, PNG, etc.)');
+                return;
+            }
+            
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                alert('Image too large. Please select an image under 10MB');
+                return;
+            }
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
                     console.log('Image loaded for:', view);
                     
                     // Mark as uploaded
@@ -980,6 +1017,10 @@
                     
                     // Get the upload container
                     const uploadContainer = document.getElementById(view + '-upload');
+                    if (!uploadContainer) {
+                        console.error('Upload container not found for:', view);
+                        return;
+                    }
                     
                     // Remove any existing preview
                     const existingPreview = uploadContainer.querySelector('.photo-preview');
@@ -1005,16 +1046,22 @@
                     
                     console.log('Upload complete for:', view);
                     checkIfReady();
-                };
-                
-                reader.onerror = function() {
-                    console.error('Error reading file for:', view);
-                    alert('Error reading the image file. Please try again.');
-                };
-                
+                } catch (error) {
+                    console.error('Error processing uploaded image:', error);
+                    alert('Error processing the uploaded image. Please try again.');
+                }
+            };
+            
+            reader.onerror = function() {
+                console.error('Error reading file for:', view);
+                alert('Error reading the image file. Please try again with a different image.');
+            };
+            
+            try {
                 reader.readAsDataURL(file);
-            } else {
-                console.log('No file selected for:', view);
+            } catch (error) {
+                console.error('Error starting file read:', error);
+                alert('Error loading image. Please try again.');
             }
         }
 
